@@ -6,4 +6,4 @@ func Even0r0dd(number int) string {
 	} else {
 		return "odd"
 	}
-}
+}					# テスト用にコメント追加
