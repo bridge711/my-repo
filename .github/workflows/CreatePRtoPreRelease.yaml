@@ -24,7 +24,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           base: PreRelease
           branch: ${{ github.ref_name }}
-          title: 'Auto PR from ${{ github.ref_name }} to PreRelease'
+          title: 'Auto PR from ${{ github.ref_name }} to main'
           body: |
             This PR was automatically created by GitHub Actions.
             Source branch: ${{ github.ref_name }}
