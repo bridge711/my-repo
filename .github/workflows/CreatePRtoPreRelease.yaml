@@ -18,11 +18,11 @@ jobs:
         with:
           go-version: '1.21'  # 使用しているGoのバージョンに合わせてください
 
-      - name: Create Pull Request to PreRelease
+      - name: Create Pull Request to main
         uses: peter-evans/create-pull-request@v5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          base: PreRelease
+          base: main
           branch: ${{ github.ref_name }}
           title: 'Auto PR from ${{ github.ref_name }} to main'
           body: |
