@@ -3,7 +3,7 @@ name: Create PR to PreRelease
 on:
   push:
     branches:
-      - master  # ここはpush元のブランチ名に応じて調整してください
+      - main  # ここはpush元のブランチ名に応じて調整してください
 
 jobs:
   create-pr:
@@ -22,7 +22,7 @@ jobs:
         uses: peter-evans/create-pull-request@v5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          base: main
+          base: master
           branch: ${{ github.ref_name }}
           title: 'Auto PR from ${{ github.ref_name }} to main'
           body: |
