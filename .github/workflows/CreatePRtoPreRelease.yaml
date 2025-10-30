@@ -1,0 +1,30 @@
+name: Create PR to PreRelease
+
+on:
+  push:
+    branches:
+      - main  # ここはpush元のブランチ名に応じて調整してください
+
+jobs:
+  create-pr:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'  # 使用しているGoのバージョンに合わせてください
+
+      - name: Create Pull Request to PreRelease
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          base: PreRelease
+          branch: ${{ github.ref_name }}
+          title: 'Auto PR from ${{ github.ref_name }} to PreRelease'
+          body: |
+            This PR was automatically created by GitHub Actions.
+            Source branch: ${{ github.ref_name }}
