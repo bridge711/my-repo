@@ -3,7 +3,7 @@ name: Create PR to PreRelease
 on:
   push:
     branches:
-      - main  # ここはpush元のブランチ名に応じて調整してください
+      - main  # ここはpush元のブランチ名に応じて調整してください2
 
 jobs:
   create-pr:
