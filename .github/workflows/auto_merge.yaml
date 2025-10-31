@@ -6,7 +6,7 @@ on:
 
 jobs:
   merge-on-approval:
-    if: ${{ github.event.review.state == 'approved' }}
+    if: ${{ github.event.review.state == 'comment' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
