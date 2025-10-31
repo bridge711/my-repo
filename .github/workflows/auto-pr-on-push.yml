@@ -4,10 +4,10 @@ on:
   push:
     branches:
       - master
-      # - 'feature/**'
-      # - 'fix/**'
-      # - 'chore/**'
-      # - 'wip/**'       # wip は下でドラフトPRにします。不要なら外してください。
+      - 'feature/**'
+      - 'fix/**'
+      - 'chore/**'
+      - 'wip/**'       # wip は下でドラフトPRにします。不要なら外してください。
     tags-ignore:
       - '**'           # タグ push は無視
 
@@ -111,37 +111,37 @@ jobs:
 
             core.setOutput('pr_url', pr.html_url);
 
-      - name: Add labels and reviewers (optional)
-        if: ${{ steps.create_pr.outputs.pr_url != '' }}
-        uses: actions/github-script@v7
-        env:
-          PR_URL: ${{ steps.create_pr.outputs.pr_url }}
-          # カンマ区切りで GitHub ユーザ名を指定（例: "alice,bob"）
-          REVIEWERS: ${{ vars.AUTO_PR_REVIEWERS || '' }}
-        with:
-          script: |
-            const owner = context.repo.owner;
-            const repo  = context.repo.repo;
-            const prUrl = process.env.PR_URL;
-            const number = Number(prUrl.split('/').pop());
+      # - name: Add labels and reviewers (optional)
+      #   if: ${{ steps.create_pr.outputs.pr_url != '' }}
+      #   uses: actions/github-script@v7
+      #   env:
+      #     PR_URL: ${{ steps.create_pr.outputs.pr_url }}
+      #     # カンマ区切りで GitHub ユーザ名を指定（例: "alice,bob"）
+      #     REVIEWERS: ${{ vars.AUTO_PR_REVIEWERS || '' }}
+      #   with:
+      #     script: |
+      #       const owner = context.repo.owner;
+      #       const repo  = context.repo.repo;
+      #       const prUrl = process.env.PR_URL;
+      #       const number = Number(prUrl.split('/').pop());
 
-            // ラベル付与（必要に応じて変更）
-            try {
-              await github.rest.issues.addLabels({
-                owner, repo, issue_number: number,
-                labels: ['auto-pr']
-              });
-            } catch (e) { core.warning(`Label add skipped: ${e.message}`); }
+      #       // ラベル付与（必要に応じて変更）
+      #       try {
+      #         await github.rest.issues.addLabels({
+      #           owner, repo, issue_number: number,
+      #           labels: ['auto-pr']
+      #         });
+      #       } catch (e) { core.warning(`Label add skipped: ${e.message}`); }
 
-            // レビューア指名（環境変数やリポジトリ変数から）
-            const reviewers = (process.env.REVIEWERS || '')
-              .split(',')
-              .map(s => s.trim())
-              .filter(Boolean);
-            if (reviewers.length) {
-              try {
-                await github.rest.pulls.requestReviewers({
-                  owner, repo, pull_number: number, reviewers
+      #       // レビューア指名（環境変数やリポジトリ変数から）
+      #       const reviewers = (process.env.REVIEWERS || '')
+      #         .split(',')
+      #         .map(s => s.trim())
+      #         .filter(Boolean);
+      #       if (reviewers.length) {
+      #         try {
+      #           await github.rest.pulls.requestReviewers({
+      #             owner, repo, pull_number: number, reviewers
                 });
               } catch (e) {
                 core.warning(`Request reviewers skipped: ${e.message}`);
