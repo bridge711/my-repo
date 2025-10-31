@@ -1,25 +1,22 @@
-name: Auto merge
+name:  Auto merge
 
-on:
+on:   ##本来はこっちだが、PRのAuthorはapproveできないので検証段階ではPRに対するコメントで代替
   pull_request_review:
     types: [submitted]
 
+# on:   #PRへのコメントで起動
+#   pull_request_review_comment:
+#     types: [created]
+  
 jobs:
   merge-on-approval:
-    if: ${{ github.event.review.state == 'approved' }}
+    if: ${{ github.event.review.state == 'approved' }}  #Reviewがapproveされたらトリガ
     runs-on: ubuntu-latest
     permissions:
       contents: write
       pull-requests: write
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
-      - name: Merge the approved PR with gh
-        env:
-          # gh CLI は GH_TOKEN を参照します（GITHUB_TOKEN ではありません）
-          GH_TOKEN: ${{ github.token }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: |
-          # 競合を避けるため、ヘッドのSHA一致を要求（レース防止）
-          gh pr merge "$PR_NUMBER" \
-            --merge \
-            --delete-branch \
-            --match-head-commit "${{ github.event.pull_request.head.sha }}"
+      - uses: actions/checkout@v4
+      - run: gh pr merge "${GITHUB_HEAD_REF}" --merge
