@@ -142,8 +142,8 @@ jobs:
       #         try {
       #           await github.rest.pulls.requestReviewers({
       #             owner, repo, pull_number: number, reviewers
-                });
-              } catch (e) {
-                core.warning(`Request reviewers skipped: ${e.message}`);
-              }
-            }
+      #           });
+      #         } catch (e) {
+      #           core.warning(`Request reviewers skipped: ${e.message}`);
+      #         }
+      #       }
