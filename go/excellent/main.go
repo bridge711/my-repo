@@ -1,6 +1,6 @@
 package main
 
-func Even0r0dd(number int) string {	//差分用コメント3
+func Even0r0dd(number int) string {	//差分用コメント4
 	if number%2 == 0 {
 		return "even"
 	} else {
