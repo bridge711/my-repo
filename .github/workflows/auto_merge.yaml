@@ -1,16 +1,16 @@
 name:  Auto merge
 
-# on:   ##本来はこっちだが、PRのAuthorはapproveできないので検証段階ではPRに対するコメントで代替
-#   pull_request_review:
-#     types: [submitted]
+on:   ##本来はこっちだが、PRのAuthorはapproveできないので検証段階ではPRに対するコメントで代替
+  pull_request_review:
+    types: [submitted]
 
-on:   #PRへのコメントで起動
-  pull_request_review_comment:
-    types: [created]
+# on:   #PRへのコメントで起動
+#   pull_request_review_comment:
+#     types: [created]
   
 jobs:
   merge-on-approval:
-    # if: ${{ github.event.review.state == 'approved' }}  #Reviewがapproveされたらトリガ
+    if: ${{ github.event.review.state == 'approved' }}  #Reviewがapproveされたらトリガ
     runs-on: ubuntu-latest
     permissions:
       contents: write
