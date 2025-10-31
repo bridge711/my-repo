@@ -1,0 +1,149 @@
+name: Auto PR on push
+
+on:
+  push:
+    branches:
+      - master
+      # - 'feature/**'
+      # - 'fix/**'
+      # - 'chore/**'
+      # - 'wip/**'       # wip は下でドラフトPRにします。不要なら外してください。
+    tags-ignore:
+      - '**'           # タグ push は無視
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: auto-pr-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  create-pr:
+    # 既定ブランチへの push は除外 & [skip pr] を含むコミットは除外
+    if: >
+      ${{ github.event.repository.default_branch != github.ref_name
+          && !contains(github.event.head_commit.message, '[skip pr]') }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Compute variables
+        id: vars
+        run: |
+          echo "BASE=${{ github.event.repository.default_branch }}" >> $GITHUB_OUTPUT
+          echo "HEAD=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          if [[ "${{ github.ref_name }}" == wip/* ]]; then
+            echo "DRAFT=true" >> $GITHUB_OUTPUT
+          else
+            echo "DRAFT=false" >> $GITHUB_OUTPUT
+          fi
+
+          # タイトル：head_commit の件名があれば使用、なければテンプレ
+          TITLE="${{ github.event.head_commit.message }}"
+          if [ -z "$TITLE" ]; then
+            TITLE="Auto PR: ${GITHUB_REF_NAME} → ${{ github.event.repository.default_branch }}"
+          fi
+          printf "TITLE<<'EOF'\n%s\nEOF\n" "$TITLE" >> $GITHUB_OUTPUT
+
+      - name: Create or update Pull Request
+        id: create_pr
+        uses: actions/github-script@v7
+        env:
+          BASE: ${{ steps.vars.outputs.BASE }}
+          HEAD: ${{ steps.vars.outputs.HEAD }}
+          PR_TITLE: ${{ steps.vars.outputs.TITLE }}
+          DRAFT: ${{ steps.vars.outputs.DRAFT }}
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo  = context.repo.repo;
+            const base  = process.env.BASE;
+            const head  = process.env.HEAD;
+            const title = process.env.PR_TITLE;
+            const draft = process.env.DRAFT === 'true';
+
+            if (base === head) {
+              core.notice(`Head and base are identical (${head}). Skipping.`);
+              return;
+            }
+
+            // 既存のオープン PR があるか？
+            const { data: prs } = await github.rest.pulls.list({
+              owner, repo, state: 'open', base, head: `${owner}:${head}`
+            });
+
+            const bodyLines = [];
+            bodyLines.push(`Auto-generated PR from \`${head}\` to \`${base}\`.`);
+
+            // push payload のコミット概要
+            try {
+              const commits = context.payload.commits || [];
+              if (commits.length) {
+                bodyLines.push('', '### Commits in this push');
+                for (const c of commits) {
+                  const sha7 = (c.id || '').substring(0, 7);
+                  const first = (c.message || '').split('\n')[0];
+                  const author = (c.author?.username || c.author?.name || 'unknown');
+                  bodyLines.push(`- ${sha7} ${first} (@${author})`);
+                }
+              }
+            } catch {}
+
+            const body = bodyLines.join('\n');
+
+            let pr;
+            if (prs.length > 0) {
+              pr = prs[0];
+              core.notice(`PR already exists: ${pr.html_url}`);
+              // タイトル/本文が空の場合のみ補完
+              await github.rest.pulls.update({
+                owner, repo, pull_number: pr.number,
+                title: pr.title || title,
+                body:  pr.body  || body
+              });
+            } else {
+              pr = (await github.rest.pulls.create({
+                owner, repo, head: head, base: base, title, body, draft
+              })).data;
+              core.notice(`Created PR: ${pr.html_url}`);
+            }
+
+            core.setOutput('pr_url', pr.html_url);
+
+      - name: Add labels and reviewers (optional)
+        if: ${{ steps.create_pr.outputs.pr_url != '' }}
+        uses: actions/github-script@v7
+        env:
+          PR_URL: ${{ steps.create_pr.outputs.pr_url }}
+          # カンマ区切りで GitHub ユーザ名を指定（例: "alice,bob"）
+          REVIEWERS: ${{ vars.AUTO_PR_REVIEWERS || '' }}
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo  = context.repo.repo;
+            const prUrl = process.env.PR_URL;
+            const number = Number(prUrl.split('/').pop());
+
+            // ラベル付与（必要に応じて変更）
+            try {
+              await github.rest.issues.addLabels({
+                owner, repo, issue_number: number,
+                labels: ['auto-pr']
+              });
+            } catch (e) { core.warning(`Label add skipped: ${e.message}`); }
+
+            // レビューア指名（環境変数やリポジトリ変数から）
+            const reviewers = (process.env.REVIEWERS || '')
+              .split(',')
+              .map(s => s.trim())
+              .filter(Boolean);
+            if (reviewers.length) {
+              try {
+                await github.rest.pulls.requestReviewers({
+                  owner, repo, pull_number: number, reviewers
+                });
+              } catch (e) {
+                core.warning(`Request reviewers skipped: ${e.message}`);
+              }
+            }
