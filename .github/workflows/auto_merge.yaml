@@ -26,3 +26,13 @@ jobs:
             --merge \
             --delete-branch \
             --match-head-commit "${{ github.event.pull_request.head.sha }}"
+      - name: Diagnose gh and PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          echo "== gh auth status ==" 
+          gh auth status -h github.com || true
+      
+          echo "== gh pr view =="
+          gh pr view "$PR_NUMBER" --json number,state,mergeable,headRefName,baseRefName || true
