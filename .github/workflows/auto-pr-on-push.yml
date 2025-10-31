@@ -30,21 +30,31 @@ jobs:
     steps:
       - name: Compute variables
         id: vars
+        shell: bash
         run: |
-          echo "BASE=${{ github.event.repository.default_branch }}" >> $GITHUB_OUTPUT
-          echo "HEAD=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          echo "BASE=${{ github.event.repository.default_branch }}" >> "$GITHUB_OUTPUT"
+          echo "HEAD=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+      
           if [[ "${{ github.ref_name }}" == wip/* ]]; then
-            echo "DRAFT=true" >> $GITHUB_OUTPUT
+            echo "DRAFT=true" >> "$GITHUB_OUTPUT"
           else
-            echo "DRAFT=false" >> $GITHUB_OUTPUT
+            echo "DRAFT=false" >> "$GITHUB_OUTPUT"
           fi
-
-          # タイトル：head_commit の件名があれば使用、なければテンプレ
+      
+          # タイトル（空ならデフォルト）
           TITLE="${{ github.event.head_commit.message }}"
           if [ -z "$TITLE" ]; then
             TITLE="Auto PR: ${GITHUB_REF_NAME} → ${{ github.event.repository.default_branch }}"
           fi
-          printf "TITLE<<'EOF'\n%s\nEOF\n" "$TITLE" >> $GITHUB_OUTPUT
+      
+          # ランダムな区切り子を生成（衝突回避）
+          DELIM="EOF_$(date +%s%N)"
+      
+          {
+            echo "TITLE<<$DELIM"
+            printf '%s\n' "$TITLE"
+            echo "$DELIM"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Create or update Pull Request
         id: create_pr
