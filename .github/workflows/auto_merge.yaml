@@ -34,5 +34,5 @@ jobs:
           # 競合・レース対策に head.sha の一致を要求（任意だが安全）
           gh pr merge "$PR_NUMBER" \
             --merge \
-            --delete-branch \
+            # --delete-branch \
             --match-head-commit "${{ github.event.pull_request.head.sha }}"
