@@ -1,38 +1,168 @@
-name: Auto merge
+name: Auto merge on review approval (github-script)
 
 on:
   pull_request_review:
-    types: [submitted]
+    types: [submitted]   # レビュー送信時に発火
+
+permissions:
+  contents: write        # マージ・ブランチ削除に必要
+  pull-requests: write   # PR 更新・コメントに必要
+  checks: read           # （任意）チェック取得に必要
+  statuses: read         # （任意）ステータス取得に必要
+
+concurrency:
+  group: auto-merge-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
 
 jobs:
   merge-on-approval:
+    # レビューが Approved のときのみ実行
     if: ${{ github.event.review.state == 'approved' }}
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
+
+    # 運用ポリシー（必要に応じてリポジトリ Variables で上書き可能）
+    env:
+      # 必須チェックがグリーンでなければマージしない
+      REQUIRE_GREEN: ${{ vars.REQUIRE_GREEN || 'true' }}
+      # 必要承認数（0=不問、2 などに設定可能）
+      MIN_APPROVALS: ${{ vars.MIN_APPROVALS || '0' }}
+      # マージ方法: merge | squash | rebase
+      MERGE_METHOD: ${{ vars.MERGE_METHOD || 'merge' }}
+      # マージ後にヘッドブランチを削除（同一リポジトリの場合のみ）
+      DELETE_BRANCH: ${{ vars.DELETE_BRANCH || 'true' }}
 
     steps:
-      - name: Diagnose gh and PR
-        env:
-          GH_TOKEN: ${{ github.token }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: |
-          echo "== gh auth status ==" 
-          gh auth status -h github.com || true
-      
-          echo "== gh pr view =="
-          gh pr view "$PR_NUMBER" --json number,state,mergeable,headRefName,baseRefName || true
+      - name: Merge PR via Octokit
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo  = context.repo.repo;
 
-      # checkout は不要（番号指定で gh がAPIに直接当たるため）
-      # - uses: actions/checkout@v4
-      - name: Merge the approved PR
-        env:
-          GH_TOKEN: ${{ github.token }}                    # gh が参照するトークン名
-          PR_NUMBER: ${{ github.event.pull_request.number }} # reviewイベントのPR番号
-        run: |
-          # 競合・レース対策に head.sha の一致を要求（任意だが安全）
-          gh pr merge "$PR_NUMBER" \
-            --merge \
-            # --delete-branch \
-            --match-head-commit "${{ github.event.pull_request.head.sha }}"
+            // イベントから PR 番号・レビュア情報等を取得
+            const prNumber = context.payload.pull_request.number;
+            const reviewer = context.payload.review.user.login;
+
+            // ========= 1) PR 情報取得 =========
+            const { data: pr } = await github.rest.pulls.get({ owner, repo, pull_number: prNumber });
+            if (pr.state !== 'open') {
+              core.setFailed(`PR #${prNumber} は open ではありません（state: ${pr.state}）。`);
+              return;
+            }
+
+            // ========= 2) 必要承認数の確認（任意機能） =========
+            const minApprovals = parseInt(process.env.MIN_APPROVALS || '0', 10);
+            if (minApprovals > 0) {
+              const { data: reviews } = await github.rest.pulls.listReviews({
+                owner, repo, pull_number: prNumber, per_page: 100
+              });
+              // ユーザごとの最新レビューで判定
+              const latestByUser = new Map();
+              for (const r of reviews) {
+                const key = r.user?.login;
+                if (!key) continue;
+                const prev = latestByUser.get(key);
+                if (!prev || new Date(prev.submitted_at||0) < new Date(r.submitted_at||0)) {
+                  latestByUser.set(key, r);
+                }
+              }
+              const approvals = [...latestByUser.values()]
+                .filter(r => (r.state||'').toUpperCase() === 'APPROVED').length;
+
+              if (approvals < minApprovals) {
+                await github.rest.issues.createComment({
+                  owner, repo, issue_number: prNumber,
+                  body: `承認が不足しています（必要: **${minApprovals}**, 現在: **${approvals}**）。`
+                });
+                core.setFailed(`Not enough approvals (${approvals}/${minApprovals}).`);
+                return;
+              }
+            }
+
+            // ========= 3) ステータスチェック（任意機能） =========
+            const requireGreen = (process.env.REQUIRE_GREEN || 'true').toLowerCase() === 'true';
+            if (requireGreen) {
+              const sha = pr.head.sha;
+              let checksOk = true;
+
+              // Checks API
+              try {
+                const { data: cl } = await github.rest.checks.listForRef({ owner, repo, ref: sha, per_page: 100 });
+                const failingChecks = cl.check_runs.filter(cr =>
+                  ['failure','timed_out','cancelled','action_required','stale']
+                    .includes((cr.conclusion || '').toLowerCase())
+                );
+                if (failingChecks.length > 0) checksOk = false;
+
+                // Combined Status（古い Status API も見る）
+                const { data: st } = await github.rest.repos.getCombinedStatusForRef({ owner, repo, ref: sha });
+                // state: success|pending|failure など
+                if (st.state && !['success','pending'].includes(st.state)) checksOk = false;
+              } catch (e) {
+                core.warning(`チェック評価に失敗: ${e.message}（続行可）`);
+              }
+
+              if (!checksOk) {
+                await github.rest.issues.createComment({
+                  owner, repo, issue_number: prNumber,
+                  body: `ステータスチェックが完了/成功していないため、マージを中止しました。`
+                });
+                core.setFailed('Status checks are not green.');
+                return;
+              }
+            }
+
+            // ========= 4) mergeable 判定の安定化（GitHubが非同期で計算するため） =========
+            async function getPR() {
+              return (await github.rest.pulls.get({ owner, repo, pull_number: prNumber })).data;
+            }
+            let current = pr;
+            for (let i = 0; i < 5 && (current.mergeable == null); i++) {
+              await new Promise(r => setTimeout(r, 1500));
+              current = await getPR();
+            }
+            if (current.mergeable === false) {
+              await github.rest.issues.createComment({
+                owner, repo, issue_number: prNumber,
+                body: `このPRは現在マージ不可です（mergeable_state: \`${current.mergeable_state}\`）。競合や保護設定を確認してください。`
+              });
+              core.setFailed(`PR not mergeable (state=${current.mergeable_state}).`);
+              return;
+            }
+
+            // ========= 5) マージ実行 =========
+            const mergeMethod = (process.env.MERGE_METHOD || 'merge').toLowerCase(); // merge|squash|rebase
+            try {
+              await github.rest.pulls.merge({
+                owner, repo, pull_number: prNumber,
+                merge_method: mergeMethod,
+                sha: current.head.sha  // 直前のヘッドSHA一致を要求（レース防止）
+              });
+            } catch (e) {
+              await github.rest.issues.createComment({
+                owner, repo, issue_number: prNumber,
+                body: `マージに失敗しました: ${e.message}`
+              });
+              core.setFailed(`Merge failed: ${e.message}`);
+              return;
+            }
+
+            // ========= 6) ブランチ削除（同一リポジトリのときのみ） =========
+            const deleteBranch = (process.env.DELETE_BRANCH || 'true').toLowerCase() === 'true';
+            if (deleteBranch) {
+              try {
+                const headRepoFull = pr.head.repo?.full_name;
+                if (headRepoFull && headRepoFull.toLowerCase() === `${owner}/${repo}`.toLowerCase()) {
+                  const ref = `heads/${pr.head.ref}`;
+                  await github.rest.git.deleteRef({ owner, repo, ref });
+                }
+              } catch (e) {
+                core.warning(`ブランチ削除に失敗: ${e.message}`);
+              }
+            }
+
+            // ========= 7) 成功コメント =========
+            await github.rest.issues.createComment({
+              owner, repo, issue_number: prNumber,
+              body: `@${reviewer} の承認により \`${mergeMethod}\` マージしました ✅`
+            });
