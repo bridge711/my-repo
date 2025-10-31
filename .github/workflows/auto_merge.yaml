@@ -13,19 +13,6 @@ jobs:
       pull-requests: write
 
     steps:
-      # checkout は不要（番号指定で gh がAPIに直接当たるため）
-      # - uses: actions/checkout@v4
-
-      - name: Merge the approved PR
-        env:
-          GH_TOKEN: ${{ github.token }}                    # gh が参照するトークン名
-          PR_NUMBER: ${{ github.event.pull_request.number }} # reviewイベントのPR番号
-        run: |
-          # 競合・レース対策に head.sha の一致を要求（任意だが安全）
-          gh pr merge "$PR_NUMBER" \
-            --merge \
-            --delete-branch \
-            --match-head-commit "${{ github.event.pull_request.head.sha }}"
       - name: Diagnose gh and PR
         env:
           GH_TOKEN: ${{ github.token }}
@@ -36,3 +23,16 @@ jobs:
       
           echo "== gh pr view =="
           gh pr view "$PR_NUMBER" --json number,state,mergeable,headRefName,baseRefName || true
+
+      # checkout は不要（番号指定で gh がAPIに直接当たるため）
+      # - uses: actions/checkout@v4
+      - name: Merge the approved PR
+        env:
+          GH_TOKEN: ${{ github.token }}                    # gh が参照するトークン名
+          PR_NUMBER: ${{ github.event.pull_request.number }} # reviewイベントのPR番号
+        run: |
+          # 競合・レース対策に head.sha の一致を要求（任意だが安全）
+          gh pr merge "$PR_NUMBER" \
+            --merge \
+            --delete-branch \
+            --match-head-commit "${{ github.event.pull_request.head.sha }}"
