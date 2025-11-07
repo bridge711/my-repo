@@ -29,7 +29,7 @@ jobs:
       # マージ方法: merge | squash | rebase
       MERGE_METHOD: ${{ vars.MERGE_METHOD || 'merge' }}
       # マージ後にヘッドブランチを削除（同一リポジトリの場合のみ）
-      DELETE_BRANCH: ${{ vars.DELETE_BRANCH || 'true' }}
+      # DELETE_BRANCH: ${{ vars.DELETE_BRANCH || 'true' }}
 
     steps:
       - name: Merge PR via Octokit
@@ -147,19 +147,19 @@ jobs:
               return;
             }
 
-            // ========= 6) ブランチ削除（同一リポジトリのときのみ） =========
-            const deleteBranch = (process.env.DELETE_BRANCH || 'true').toLowerCase() === 'true';
-            if (deleteBranch) {
-              try {
-                const headRepoFull = pr.head.repo?.full_name;
-                if (headRepoFull && headRepoFull.toLowerCase() === `${owner}/${repo}`.toLowerCase()) {
-                  const ref = `heads/${pr.head.ref}`;
-                  await github.rest.git.deleteRef({ owner, repo, ref });
-                }
-              } catch (e) {
-                core.warning(`ブランチ削除に失敗: ${e.message}`);
-              }
-            }
+            # // ========= 6) ブランチ削除（同一リポジトリのときのみ） =========
+            # const deleteBranch = (process.env.DELETE_BRANCH || 'true').toLowerCase() === 'true';
+            # if (deleteBranch) {
+            #   try {
+            #     const headRepoFull = pr.head.repo?.full_name;
+            #     if (headRepoFull && headRepoFull.toLowerCase() === `${owner}/${repo}`.toLowerCase()) {
+            #       const ref = `heads/${pr.head.ref}`;
+            #       await github.rest.git.deleteRef({ owner, repo, ref });
+            #     }
+            #   } catch (e) {
+            #     core.warning(`ブランチ削除に失敗: ${e.message}`);
+            #   }
+            # }
 
             // ========= 7) 成功コメント =========
             await github.rest.issues.createComment({
