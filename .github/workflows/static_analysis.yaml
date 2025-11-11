@@ -1,9 +1,8 @@
 name: Static analysis
-# on:
-#   pull_request:
-#     # paths: ['go/**/*.go']
 on:
-  workflow_dispatch:
+  pull_request:
+    # paths: ['go/**/*.go']
+
 defaults:
     run:
       shell: bash
