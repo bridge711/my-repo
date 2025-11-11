@@ -1,8 +1,8 @@
 name: Static analysis
 on:
-  pull_request:
+  # pull_request:
     # paths: ['.github/workflow/*yml']
-  # push:
+  push:
     # paths: ['go/**/*.go']
 defaults:
     run:
