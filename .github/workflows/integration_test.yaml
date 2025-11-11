@@ -1,0 +1,16 @@
+name: Integration Test
+
+on:
+  workflow_run:
+    workflows: ['Unit Test']      # 上の name と一致させる
+    types: [completed]           # 完了時のみトリガー
+    
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4   #ステップ１：チェックアウト
+      - uses: actions/setup-go@v5   #ステップ２：言語セットアップ
+        with:
+          go-version: '1.22'
+      - run: go test go/excellent/*.go #ステップ３：テストの実行
