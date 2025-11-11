@@ -87,10 +87,10 @@ jobs:
             // ========= 3) ステータスチェック（任意機能） =========
             const requireGreen = (process.env.REQUIRE_GREEN || 'true').toLowerCase() === 'true';
             if (requireGreen) {
-              const sha = pr.head.sha;
+              const sha = pr.head.sha;  # 対象コミットのハッシュ取得
               let checksOk = true;
 
-              // Checks API
+              // Checks APIでcheckの失敗・未完了を検出
               try {
                 const { data: cl } = await github.rest.checks.listForRef({ owner, repo, ref: sha, per_page: 100 });
                 const failingChecks = cl.check_runs.filter(cr =>
@@ -99,14 +99,14 @@ jobs:
                 );
                 if (failingChecks.length > 0) checksOk = false;
 
-                // Combined Status（古い Status API も見る）
+                // Combined Status（古い Status API でもステータスを見る）
                 const { data: st } = await github.rest.repos.getCombinedStatusForRef({ owner, repo, ref: sha });
                 // state: success|pending|failure など
                 if (st.state && !['success','pending'].includes(st.state)) checksOk = false;
-              } catch (e) {
+              } catch (e) {        # そもそものAPI呼び出しが失敗した場合は警告ログにとどめる
                 core.warning(`チェック評価に失敗: ${e.message}（続行可）`);
               }
-
+              # NG時のフィードバックと終了
               if (!checksOk) {
                 await github.rest.issues.createComment({
                   owner, repo, issue_number: prNumber,
@@ -118,14 +118,17 @@ jobs:
             }
 
             // ========= 4) mergeable 判定の安定化（GitHubが非同期で計算するため） =========
+            # 最新のPRを取り出す
             async function getPR() {
               return (await github.rest.pulls.get({ owner, repo, pull_number: prNumber })).data;
             }
             let current = pr;
+            # PRの mergeableフィールドがnullの場合時間をおいて取り直す
             for (let i = 0; i < 5 && (current.mergeable == null); i++) {
               await new Promise(r => setTimeout(r, 1500));
               current = await getPR();
             }
+            # マージ不可（mergeable === false）なら打ち切り
             if (current.mergeable === false) {
               await github.rest.issues.createComment({
                 owner, repo, issue_number: prNumber,
@@ -141,9 +144,9 @@ jobs:
               await github.rest.pulls.merge({
                 owner, repo, pull_number: prNumber,
                 merge_method: mergeMethod,
-                sha: current.head.sha  // 直前のヘッドSHA一致を要求（レース防止）
+                sha: current.head.sha  # 直前のヘッドSHA一致を要求（レース防止）
               });
-            } catch (e) {
+            } catch (e) {  # 失敗時の通知と終了
               await github.rest.issues.createComment({
                 owner, repo, issue_number: prNumber,
                 body: `マージに失敗しました: ${e.message}`
@@ -167,6 +170,7 @@ jobs:
             # }
 
             // ========= 7) 成功コメント =========
+            # 自動マージが成功しことをPRへのコメントで通知
             await github.rest.issues.createComment({
               owner, repo, issue_number: prNumber,
               body: `@${reviewer} の承認により \`${mergeMethod}\` マージしました ✅`
