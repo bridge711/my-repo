@@ -1,6 +1,6 @@
 name: Manual
 on:
-  workflow_dispatch:  #コメント
+  workflow_dispatch:  #コメント1
     inputs:
       greeting:
         type: string
