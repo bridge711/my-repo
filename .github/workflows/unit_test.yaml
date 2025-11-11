@@ -2,8 +2,7 @@ name: Unit Test
 
 on:
   workflow_run:
-    # workflows: ['Static analysis']      # 上の name と一致させる
-    workflows: ['Manual']      # 上の name と一致させる
+    workflows: ['Static analysis']      # 上の name と一致させる
     types: [completed]           # 完了時のみトリガー
 
 # on:
