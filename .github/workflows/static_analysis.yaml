@@ -1,6 +1,6 @@
 name: Static analysis
 on:
-  # pull_request:
+  # pull_request:  //なぜかPR作成で発火できないから今はPush契機でやっている
     # paths: ['.github/workflow/*yml']
   push:
     # paths: ['go/**/*.go']
