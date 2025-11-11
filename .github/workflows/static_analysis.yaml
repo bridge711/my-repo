@@ -1,7 +1,7 @@
 name: Static analysis
 on:
   pull_request:
-    paths: ['.github/go/*/*.go']
+    paths: ['.github/go/excellent/*.go']
 defaults:
     run:
       shell: bash
