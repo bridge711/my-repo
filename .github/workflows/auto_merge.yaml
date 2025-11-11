@@ -51,29 +51,29 @@ jobs:
             }
 
             // ========= 2) 必要承認数の確認（任意機能） =========
-            // 承認数しきい値の取得
+            # 承認数しきい値の取得
             const minApprovals = parseInt(process.env.MIN_APPROVALS || '0', 10);
             if (minApprovals > 0) {
-            // 該当 PR のレビュー履歴（誰がいつ何を出したか）を取得
+            # 該当 PR のレビュー履歴（誰がいつ何を出したか）を取得
               const { data: reviews } = await github.rest.pulls.listReviews({
                 owner, repo, pull_number: prNumber, per_page: 100
               });
-              // ユーザごとの最新レビューで判定
+              # ユーザごとの最新レビューで判定
               const latestByUser = new Map();
               for (const r of reviews) {
-                const key = r.user?.login;  // レビュアの GitHub アカウント名
-                if (!key) continue;         // null 安全対策
+                const key = r.user?.login;  # レビュアの GitHub アカウント名
+                if (!key) continue;         # null 安全対策
                 const prev = latestByUser.get(key);
-                // submitted_at がより新しい方を残す
+                # submitted_at がより新しい方を残す
                 if (!prev || new Date(prev.submitted_at||0) < new Date(r.submitted_at||0)) {
                   latestByUser.set(key, r);
                 }
               }
-              // APPROVED'のユーザー数をカウント
+              # APPROVED'のユーザー数をカウント
               const approvals = [...latestByUser.values()]
                 .filter(r => (r.state||'').toUpperCase() === 'APPROVED').length;
 
-              // 承認が足りない場合のフィードバックと打ち切り
+              # 承認が足りない場合のフィードバックと打ち切り
               if (approvals < minApprovals) {
                 await github.rest.issues.createComment({
                   owner, repo, issue_number: prNumber,
