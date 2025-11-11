@@ -1,6 +1,6 @@
 package main
 
-func Even0r0dd(number int) string {	//ワークフローテスト用コメント6
+func Even0r0dd(number int) string {	//ワークフローテスト用コメント7
 	if number%2 == 0 {
 		return "even"
 	} else {
