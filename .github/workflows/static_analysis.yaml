@@ -1,7 +1,8 @@
 name: Static analysis
 on:
-  pull_request:
-    # paths: ['go/**/*.go']
+  # pull_request:
+  push:
+    paths: ['go/**/*.go']
 
 defaults:
     run:
