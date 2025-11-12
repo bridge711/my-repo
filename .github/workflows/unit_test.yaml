@@ -1,17 +1,15 @@
 name: Unit Test
 
 on:
-  workflow_run:
-    workflows: ['Static analysis']      # 上の name と一致させる
-    types: [completed]           # 完了時のみトリガー
-
-# on:
-#   pull_request:                     #プルリクエストが作成されたら起動
-#     paths: ['go/**/*.go']           #ただしGoのファイル変更時のみ
+  # workflow_run:
+  #   workflows: ['Static analysis']      # 上の name と一致させる
+  #   types: [completed]           # 完了時のみトリガー
+  push:
+    paths: ['go/**/*.go']
 
 jobs:
   test:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    # if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4   #ステップ１：チェックアウト
