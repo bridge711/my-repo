@@ -1,9 +1,6 @@
 name: Integration Test
 
 on:
-  workflow_run:
-    workflows: ['Unit Test']      # 上の name と一致させる
-    types: [completed]           # 完了時のみトリガー
   push:
     paths: ['go/**/*.go']
     
