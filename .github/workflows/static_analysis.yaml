@@ -1,10 +1,10 @@
 name: Static analysis
 
 on:
-  pull_request:
-  # push:
-    # paths:
-    #   - 'go/**/*.go'
+  # pull_request:  #一向にPRトリガ動作がうまくいかない。settingがおかしいか。
+  push:
+    paths:
+      - 'go/**/*.go'
 
 # jobs:
 #   lint:
