@@ -3,7 +3,7 @@ on:
   # pull_request:  //なぜかPR作成で発火できないから今はPush契機でやっている
     # paths: ['.github/workflow/*yml']
   push:
-    # paths: ['go/**/*.go']
+    paths: ['go/**/*.go']
 defaults:
     run:
       shell: bash
