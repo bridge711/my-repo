@@ -2,8 +2,8 @@ name: Static analysis
 
 on:
   push:
-    # paths:
-      # - 'go/**/*.go'
+    paths:
+      - 'go/**/*.go'
     # tags-ignore:
     #   - '**'  # タグのpushは無視（任意）
 
