@@ -1,0 +1,12 @@
+name: Echo on PR
+
+on:
+  pull_request:
+    types: [opened] # PRが作成されたときのみトリガー
+
+jobs:
+  say-hello:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print Hello
+        run: echo "Hello"
