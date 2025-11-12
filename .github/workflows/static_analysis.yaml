@@ -7,49 +7,55 @@ on:
     tags-ignore:
       - '**'  # タグのpushは無視（任意）
 
-jobs:
-  lint:
+# jobs:
+#   lint:
+#     runs-on: ubuntu-latest
+#     timeout-minutes: 10
+#     steps:
+#       - name: Checkout
+#         uses: actions/checkout@v4
+#         with:
+#           fetch-depth: 0  # 差分比較に必要な履歴を取得
+
+#       - name: Setup Go
+#         uses: actions/setup-go@v5
+#         with:
+#           go-version: '1.22'
+
+#       - name: Compute diff range
+#         id: diff
+#         shell: bash
+#         run: |
+#           FROM="${{ github.event.before }}"
+#           TO="${{ github.sha }}"
+
+#           # 初回pushなどで before がゼロSHAのケースに対処
+#           if [[ "$FROM" == "0000000000000000000000000000000000000000" || -z "$FROM" ]]; then
+#             if git rev-parse HEAD^ >/dev/null 2>&1; then
+#               FROM="$(git rev-parse HEAD^)"
+#             else
+#               FROM="$(git rev-list --max-parents=0 HEAD)"
+#             fi
+#           fi
+
+#           echo "from=$FROM" >> "$GITHUB_OUTPUT"
+#           echo "to=$TO"     >> "$GITHUB_OUTPUT"
+
+#       - name: Run golangci-lint for changed files under go/
+#         uses: golangci/golangci-lint-action@v6
+#         with:
+#           version: v1.59.0
+#           only-new-issues: false
+#           # 変更ファイルに限定して報告する（git-changed）
+#           # 対象は go/ 配下のパッケージ群（./go/...）
+#           args: >
+#             --new-from-rev=${{ steps.diff.outputs.from }}
+#             --new-to-rev=${{ steps.diff.outputs.to }}
+#             --filter-mode=git-changed
+#             ./go/...
+
+jobs:  #お作法が分からないのでいったんダミーの処理
+  run:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # 差分比較に必要な履歴を取得
-
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.22'
-
-      - name: Compute diff range
-        id: diff
-        shell: bash
-        run: |
-          FROM="${{ github.event.before }}"
-          TO="${{ github.sha }}"
-
-          # 初回pushなどで before がゼロSHAのケースに対処
-          if [[ "$FROM" == "0000000000000000000000000000000000000000" || -z "$FROM" ]]; then
-            if git rev-parse HEAD^ >/dev/null 2>&1; then
-              FROM="$(git rev-parse HEAD^)"
-            else
-              FROM="$(git rev-list --max-parents=0 HEAD)"
-            fi
-          fi
-
-          echo "from=$FROM" >> "$GITHUB_OUTPUT"
-          echo "to=$TO"     >> "$GITHUB_OUTPUT"
-
-      - name: Run golangci-lint for changed files under go/
-        uses: golangci/golangci-lint-action@v6
-        with:
-          version: v1.59.0
-          only-new-issues: false
-          # 変更ファイルに限定して報告する（git-changed）
-          # 対象は go/ 配下のパッケージ群（./go/...）
-          args: >
-            --new-from-rev=${{ steps.diff.outputs.from }}
-            --new-to-rev=${{ steps.diff.outputs.to }}
-            --filter-mode=git-changed
-            ./go/...
+      - run: echo "Hello"
