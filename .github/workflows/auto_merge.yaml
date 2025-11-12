@@ -51,29 +51,29 @@ jobs:
             }
 
             // ========= 2) 必要承認数の確認（任意機能） =========
-            # 承認数しきい値の取得
+            // 承認数しきい値の取得
             const minApprovals = parseInt(process.env.MIN_APPROVALS || '0', 10);
             if (minApprovals > 0) {
-            # 該当 PR のレビュー履歴（誰がいつ何を出したか）を取得
+            // 該当 PR のレビュー履歴（誰がいつ何を出したか）を取得
               const { data: reviews } = await github.rest.pulls.listReviews({
                 owner, repo, pull_number: prNumber, per_page: 100
               });
-              # ユーザごとの最新レビューで判定
+              // ユーザごとの最新レビューで判定
               const latestByUser = new Map();
               for (const r of reviews) {
-                const key = r.user?.login;  # レビュアの GitHub アカウント名
-                if (!key) continue;         # null 安全対策
+                const key = r.user?.login;  // レビュアの GitHub アカウント名
+                if (!key) continue;         // null 安全対策
                 const prev = latestByUser.get(key);
-                # submitted_at がより新しい方を残す
+                // submitted_at がより新しい方を残す
                 if (!prev || new Date(prev.submitted_at||0) < new Date(r.submitted_at||0)) {
                   latestByUser.set(key, r);
                 }
               }
-              # APPROVED'のユーザー数をカウント
+              // APPROVED'のユーザー数をカウント
               const approvals = [...latestByUser.values()]
                 .filter(r => (r.state||'').toUpperCase() === 'APPROVED').length;
 
-              # 承認が足りない場合のフィードバックと打ち切り
+              // 承認が足りない場合のフィードバックと打ち切り
               if (approvals < minApprovals) {
                 await github.rest.issues.createComment({
                   owner, repo, issue_number: prNumber,
@@ -87,7 +87,7 @@ jobs:
             // ========= 3) ステータスチェック（任意機能） =========
             const requireGreen = (process.env.REQUIRE_GREEN || 'true').toLowerCase() === 'true';
             if (requireGreen) {
-              const sha = pr.head.sha;  # 対象コミットのハッシュ取得
+              const sha = pr.head.sha;  // 対象コミットのハッシュ取得
               let checksOk = true;
 
               // Checks APIでcheckの失敗・未完了を検出
@@ -103,10 +103,10 @@ jobs:
                 const { data: st } = await github.rest.repos.getCombinedStatusForRef({ owner, repo, ref: sha });
                 // state: success|pending|failure など
                 if (st.state && !['success','pending'].includes(st.state)) checksOk = false;
-              } catch (e) {        # そもそものAPI呼び出しが失敗した場合は警告ログにとどめる
+              } catch (e) {        // そもそものAPI呼び出しが失敗した場合は警告ログにとどめる
                 core.warning(`チェック評価に失敗: ${e.message}（続行可）`);
               }
-              # NG時のフィードバックと終了
+              // NG時のフィードバックと終了
               if (!checksOk) {
                 await github.rest.issues.createComment({
                   owner, repo, issue_number: prNumber,
@@ -118,17 +118,17 @@ jobs:
             }
 
             // ========= 4) mergeable 判定の安定化（GitHubが非同期で計算するため） =========
-            # 最新のPRを取り出す
+            // 最新のPRを取り出す
             async function getPR() {
               return (await github.rest.pulls.get({ owner, repo, pull_number: prNumber })).data;
             }
             let current = pr;
-            # PRの mergeableフィールドがnullの場合時間をおいて取り直す
+            // PRの mergeableフィールドがnullの場合時間をおいて取り直す
             for (let i = 0; i < 5 && (current.mergeable == null); i++) {
               await new Promise(r => setTimeout(r, 1500));
               current = await getPR();
             }
-            # マージ不可（mergeable === false）なら打ち切り
+            // マージ不可（mergeable === false）なら打ち切り
             if (current.mergeable === false) {
               await github.rest.issues.createComment({
                 owner, repo, issue_number: prNumber,
@@ -144,9 +144,9 @@ jobs:
               await github.rest.pulls.merge({
                 owner, repo, pull_number: prNumber,
                 merge_method: mergeMethod,
-                sha: current.head.sha  # 直前のヘッドSHA一致を要求（レース防止）
+                sha: current.head.sha  // 直前のヘッドSHA一致を要求（レース防止）
               });
-            } catch (e) {  # 失敗時の通知と終了
+            } catch (e) {  // 失敗時の通知と終了
               await github.rest.issues.createComment({
                 owner, repo, issue_number: prNumber,
                 body: `マージに失敗しました: ${e.message}`
@@ -155,22 +155,22 @@ jobs:
               return;
             }
 
-            # // ========= 6) ブランチ削除（同一リポジトリのときのみ） =========
-            # const deleteBranch = (process.env.DELETE_BRANCH || 'true').toLowerCase() === 'true';
-            # if (deleteBranch) {
-            #   try {
-            #     const headRepoFull = pr.head.repo?.full_name;
-            #     if (headRepoFull && headRepoFull.toLowerCase() === `${owner}/${repo}`.toLowerCase()) {
-            #       const ref = `heads/${pr.head.ref}`;
-            #       await github.rest.git.deleteRef({ owner, repo, ref });
-            #     }
-            #   } catch (e) {
-            #     core.warning(`ブランチ削除に失敗: ${e.message}`);
-            #   }
-            # }
+            // ========= 6) ブランチ削除（同一リポジトリのときのみ） =========
+            // const deleteBranch = (process.env.DELETE_BRANCH || 'true').toLowerCase() === 'true';
+            // if (deleteBranch) {
+            //   try {
+            //     const headRepoFull = pr.head.repo?.full_name;
+            //     if (headRepoFull && headRepoFull.toLowerCase() === `${owner}/${repo}`.toLowerCase()) {
+            //       const ref = `heads/${pr.head.ref}`;
+            //       await github.rest.git.deleteRef({ owner, repo, ref });
+            //     }
+            //   } catch (e) {
+            //     core.warning(`ブランチ削除に失敗: ${e.message}`);
+            //   }
+            // }
 
             // ========= 7) 成功コメント =========
-            # 自動マージが成功しことをPRへのコメントで通知
+            // 自動マージが成功しことをPRへのコメントで通知
             await github.rest.issues.createComment({
               owner, repo, issue_number: prNumber,
               body: `@${reviewer} の承認により \`${mergeMethod}\` マージしました ✅`
