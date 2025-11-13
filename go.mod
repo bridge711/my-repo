@@ -1,4 +1,4 @@
-module github.com/bridge711/go-sample
+module github.com/bridge711/my-repo
 
 go 1.25.4
 
