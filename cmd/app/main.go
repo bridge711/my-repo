@@ -6,7 +6,7 @@ import (
     "os"
     "time"
 
-    githubapi "github.com/bridge711/myrepo/internal/githubapi"
+    githubapi "github.com/bridge711/my-repo/internal/githubapi"
 )
 
 func main() {
