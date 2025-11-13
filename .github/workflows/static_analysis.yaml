@@ -4,7 +4,7 @@ on:
   # pull_request:  #一向にPRトリガ動作がうまくいかない。settingがおかしいか。
   push:
     paths:
-      - 'go/**/*.go'
+      - '*.go'
 
 # jobs:
 #   lint:
